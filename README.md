@@ -98,7 +98,14 @@ Instead of adopting a heavy boilerplate solution like Redux, I chose **Recoil** 
 - **Reasoning:** For an application of this scope, Redux introduces unnecessary complexity.
 - **Benefit:** Recoil offers a minimal, atomic API that allows for rapid development. This aligns with the principle of **"Right-Sizing the Architecture"**—avoiding over-engineering where a simpler solution suffices.
 
-### 4. UI Strategy: Radical Simplicity
+### 4. Performance: Pre-Computed Aggregation (CQRS Pattern)
+
+Calculating total monthly expenses (`SUM(amount)`) on-the-fly becomes exponentially slower as transaction history grows.
+
+- **The Strategy:** I implemented a **"Write-Heavy, Read-Light"** approach using a separate `total_transactions` table.
+- **The Benefit:** Fetching the dashboard balance is always **O(1)**, ensuring the app feels incredibly snappy regardless of data volume.
+
+### 5. UI Strategy: Radical Simplicity
 
 I consciously prioritized **Accessibility over Aesthetics**.
 
@@ -107,32 +114,45 @@ I consciously prioritized **Accessibility over Aesthetics**.
 
 ---
 
-### 🏗️ Architecture Diagram
+## 🔐 Security & Auth Architecture
 
-_(Please refer to the diagram below for the data flow)_
+### 1. Login Flow with Rate Limiting (Freeze Logic)
 
-![Place your Architecture Diagram Here](assets/diagram.png)
+To prevent brute-force attacks on the 6-digit PIN, I implemented a **Server-Side Freeze Mechanism**.
 
-> **Engineering Decision:**
-> I implemented a relational database structure for the **Category System** to ensure referential integrity. When a user views a summary, the app performs efficient aggregation queries directly on the local database rather than processing arrays in memory, ensuring performance remains O(1) even as transaction history grows to thousands of records.
+- **Logic:** If a user fails authentication multiple times, the account is logically "frozen" in the database for **6 minutes**.
+- **Security:** All 500 errors are masked as generic messages to the client, while real stack traces are logged internally.
+
+![Login Flow](assets/login-flow.png)
+
+### 2. PIN Lifecycle (ACID Transactions)
+
+All sensitive write operations (Registration, Update PIN) are wrapped in **Database Transactions** to ensure data integrity. If any part fails, the system performs a `ROLLBACK` to prevent orphan records.
+
+![PIN Flow](assets/pin-lifecycle.png)
 
 ---
 
-## 📷 Screenshots
+## 📊 Transaction Data Flow & Optimization
 
-|            Dashboard            |         Add Transaction         |       Category Management       |
-| :-----------------------------: | :-----------------------------: | :-----------------------------: |
-| ![Screen 1](assets/screen1.png) | ![Screen 2](assets/screen2.png) | ![Screen 3](assets/screen3.png) |
+### 1. Read Flow: Parallel Fetching
 
----
+To optimize the user experience, the Dashboard performs **Parallel Requests** to fetch the Transaction List and the Pre-calculated Total simultaneously, while displaying individual Skeleton Loaders.
 
-## 🔒 Proprietary Notice
+![Read Flow](assets/read-flow.png)
 
-**This is a closed-source commercial project.**
+### 2. Create Flow: Atomic Aggregation
 
-Due to the proprietary nature of the application (currently live on Google Play Store), the full source code is not publicly available in this repository.
+When a transaction is created, the system updates both the `transactions` table and the `total_transactions` table within a single ACID transaction. The app then optimistically navigates back to the Homepage and refreshes the data in the background.
 
-However, I am available to provide a **live code walkthrough** or discuss specific implementation details (such as the Database Schema or Sync Logic) during the technical interview.
+![Create Flow](assets/create-flow.png)
+
+### 3. Mutation Strategy (Update & Soft Deletes)
+
+- **Soft Deletes:** Transactions are never physically removed. The system sets a `deleted_at` timestamp for audit trails.
+- **Consistency:** The aggregation table is immediately synchronized (amount subtracted) upon deletion logic.
+
+![Update Flow](assets/update-delete-flow.png)
 
 ---
 
