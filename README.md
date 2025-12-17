@@ -43,6 +43,16 @@ To provide granular financial insights, I implemented a flexible categorization 
 
 ---
 
+## 📷 App Showcase
+
+|               Dashboard Expense               |               Dashboard Income                |               Transaction Form                |
+| :-------------------------------------------: | :-------------------------------------------: | :-------------------------------------------: |
+| <img src="assets/screen3.webp" width="250" /> | <img src="assets/screen1.webp" width="250" /> | <img src="assets/screen2.webp" width="250" /> |
+
+_(Screenshots displaying the 'Radical Simplicity' design philosophy)_
+
+---
+
 ## 🛠 Technical Stack & Architecture
 
 This project was built to demonstrate **scalable mobile architecture** and **robust data handling**.
